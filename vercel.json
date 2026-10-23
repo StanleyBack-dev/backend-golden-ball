@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "git": {
+    "deploymentEnabled": {
+      "master": false
+    }
+  },
+  "builds": [
+    {
+      "src": "serverless.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "serverless.ts"
+    }
+  ]
+}

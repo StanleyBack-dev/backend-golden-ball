@@ -1,0 +1,380 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type CandidateDto {
+  slug: String!
+
+  """
+  Nome pelo qual o jogador é conhecido.
+  """
+  name: String!
+
+  """
+  Nome completo do jogador.
+  """
+  fullName: String!
+
+  """
+  Foto do jogador.
+  """
+  photoUrl: String
+
+  """
+  Clube(s) na temporada.
+  """
+  club: String!
+
+  """
+  Seleção.
+  """
+  nationality: String!
+
+  """
+  Posição em campo.
+  """
+  position: String!
+  color: String!
+}
+
+type GetCandidatesQueryResponseDto {
+  success: Boolean!
+  message: String
+  code: String
+  data: [CandidateDto!]!
+}
+
+type CandidateResultDto {
+  slug: String!
+
+  """
+  Nome pelo qual o jogador é conhecido.
+  """
+  name: String!
+
+  """
+  Nome completo do jogador.
+  """
+  fullName: String!
+
+  """
+  Foto do jogador.
+  """
+  photoUrl: String
+
+  """
+  Clube(s) na temporada.
+  """
+  club: String!
+
+  """
+  Seleção.
+  """
+  nationality: String!
+
+  """
+  Posição em campo.
+  """
+  position: String!
+  color: String!
+  votes: Int!
+
+  """
+  Percentual dos votos (0–100).
+  """
+  percentage: Float!
+}
+
+type StateCandidateResultDto {
+  slug: String!
+  votes: Int!
+
+  """
+  Percentual dos votos do recorte.
+  """
+  percentage: Float!
+}
+
+type StateResultDto {
+  state: String!
+  totalVotes: Int!
+  candidates: [StateCandidateResultDto!]!
+}
+
+type PollResultsDto {
+  totalVotes: Int!
+  votingOpen: Boolean!
+
+  """
+  Instante oficial de encerramento (ISO 8601, UTC). Igual para todos os estados.
+  """
+  votingClosesAt: String!
+  updatedAt: String!
+
+  """
+  Indicados na ordem oficial (alfabética).
+  """
+  candidates: [CandidateResultDto!]!
+  states: [StateResultDto!]!
+}
+
+type PollResultsQueryResponseDto {
+  success: Boolean!
+  message: String
+  code: String
+  data: PollResultsDto!
+}
+
+type CandidateStatesWonDto {
+  slug: String!
+  states: Int!
+}
+
+type AnalyticsSummaryDto {
+  totalVotes: Int!
+
+  """
+  Votos no Brasil inteiro, no mesmo período.
+  """
+  nationalVotes: Int!
+
+  """
+  Peso do recorte no total nacional (%).
+  """
+  shareOfNational: Float!
+  leaderSlug: String
+  marginVotes: Int!
+
+  """
+  Vantagem em pontos percentuais.
+  """
+  marginPoints: Float!
+  statesWon: [CandidateStatesWonDto!]!
+  tiedStates: Int!
+  statesWithoutVotes: Int!
+}
+
+type RegionAnalyticsDto {
+  totalVotes: Int!
+  region: BrazilianRegion!
+  label: String!
+  candidates: [StateCandidateResultDto!]!
+  leaderSlug: String
+  marginPoints: Float!
+}
+
+"""
+Regiões geográficas do IBGE.
+"""
+enum BrazilianRegion {
+  NORTE
+  NORDESTE
+  CENTRO_OESTE
+  SUDESTE
+  SUL
+}
+
+type StateAnalyticsDto {
+  totalVotes: Int!
+  state: String!
+  region: BrazilianRegion!
+
+  """
+  Peso do estado no recorte (%).
+  """
+  shareOfSlice: Float!
+  candidates: [StateCandidateResultDto!]!
+  leaderSlug: String
+  marginVotes: Int!
+  marginPoints: Float!
+}
+
+type TimelineCandidateDto {
+  slug: String!
+
+  """
+  Votos dentro do intervalo.
+  """
+  votes: Int!
+  cumulativeVotes: Int!
+
+  """
+  Percentual acumulado.
+  """
+  cumulativePercentage: Float!
+}
+
+type TimelinePointDto {
+  """
+  Início do intervalo (ISO 8601, UTC).
+  """
+  at: String!
+  totalVotes: Int!
+  cumulativeTotal: Int!
+  candidates: [TimelineCandidateDto!]!
+}
+
+type PollAnalyticsDto {
+  summary: AnalyticsSummaryDto!
+  candidates: [CandidateResultDto!]!
+  regions: [RegionAnalyticsDto!]!
+  states: [StateAnalyticsDto!]!
+  granularity: TimelineGranularity!
+  timeline: [TimelinePointDto!]!
+  updatedAt: String!
+}
+
+enum TimelineGranularity {
+  HOUR
+  DAY
+}
+
+type PollAnalyticsQueryResponseDto {
+  success: Boolean!
+  message: String
+  code: String
+  data: PollAnalyticsDto!
+}
+
+type CastVoteResponseDto {
+  registered: Boolean!
+  candidateSlug: String!
+  state: String!
+
+  """
+  Momento do registro, segundo o servidor (ISO 8601).
+  """
+  votedAt: String!
+}
+
+type CastVoteMutationResponseDto {
+  success: Boolean!
+  message: String
+  code: String
+  data: CastVoteResponseDto!
+}
+
+type VoterDto {
+  name: String!
+  email: String!
+  pictureUrl: String
+
+  """
+  Se esta conta já registrou um voto.
+  """
+  hasVoted: Boolean!
+}
+
+type SignInWithGoogleResponseDto {
+  """
+  Sessão; o BFF a guarda num cookie httpOnly.
+  """
+  sessionToken: String!
+
+  """
+  Expiração da sessão (ISO 8601).
+  """
+  expiresAt: String!
+  voter: VoterDto!
+}
+
+type SignInWithGoogleMutationResponseDto {
+  success: Boolean!
+  message: String
+  code: String
+  data: SignInWithGoogleResponseDto!
+}
+
+type CurrentVoterQueryResponseDto {
+  success: Boolean!
+  message: String
+  code: String
+
+  """
+  Nulo quando não há sessão válida.
+  """
+  data: VoterDto
+}
+
+type Query {
+  candidates: GetCandidatesQueryResponseDto!
+  pollAnalytics(
+    filter: PollAnalyticsFilterInput
+  ): PollAnalyticsQueryResponseDto!
+  currentVoter: CurrentVoterQueryResponseDto!
+  pollResults: PollResultsQueryResponseDto!
+}
+
+input PollAnalyticsFilterInput {
+  region: BrazilianRegion
+
+  """
+  UFs. Combinado com `region`, vale a interseção.
+  """
+  states: [String!]
+
+  """
+  Início do período (ISO 8601 com fuso).
+  """
+  from: String
+
+  """
+  Fim do período (ISO 8601 com fuso).
+  """
+  to: String
+
+  """
+  Somente estados em que este candidato lidera.
+  """
+  leaderSlug: String
+
+  """
+  Somente estados com pelo menos N votos.
+  """
+  minVotes: Int
+  sortBy: StateSortField
+  sortCandidateSlug: String
+  order: SortOrder
+
+  """
+  Padrão automático: hora até 72h de período, dia acima disso.
+  """
+  granularity: TimelineGranularity
+}
+
+enum StateSortField {
+  TOTAL_VOTES
+  STATE
+  MARGIN
+  CANDIDATE_SHARE
+}
+
+enum SortOrder {
+  ASC
+  DESC
+}
+
+type Mutation {
+  castVote(input: CastVoteInputDto!): CastVoteMutationResponseDto!
+  signInWithGoogle(
+    input: SignInWithGoogleInputDto!
+  ): SignInWithGoogleMutationResponseDto!
+}
+
+input CastVoteInputDto {
+  candidateSlug: String!
+  state: String!
+
+  """
+  Aceite do aviso de privacidade (LGPD).
+  """
+  privacyConsent: Boolean!
+  captchaToken: String
+}
+
+input SignInWithGoogleInputDto {
+  """
+  ID token (credential) devolvido pelo botão do Google.
+  """
+  idToken: String!
+}

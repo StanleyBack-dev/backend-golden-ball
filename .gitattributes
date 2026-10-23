@@ -1,0 +1,4 @@
+# Keep LF everywhere (Prettier and the Linux CI expect it), even on Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
