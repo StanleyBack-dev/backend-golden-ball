@@ -1,33 +1,18 @@
 import { Field, Float, Int, ObjectType } from "@nestjs/graphql";
-import { BrazilianRegion } from "../../../../common/constants/brazilian-regions.constant";
 import { createDataResponseDto } from "../../../../common/responses/factories/create-data-response.dto";
 import { TimelineGranularity } from "../../enums/analytics.enums";
-import {
-  CandidateResultDto,
-  StateCandidateResultDto,
-} from "../results/poll-results-response.dto";
-
-@ObjectType()
-export class CandidateStatesWonDto {
-  @Field()
-  slug!: string;
-
-  @Field(() => Int)
-  states!: number;
-}
+import { CandidateResultDto } from "../results/poll-results-response.dto";
 
 @ObjectType()
 export class AnalyticsSummaryDto {
-  @Field(() => Int)
+  @Field(() => Int, { description: "Votos dentro do período." })
   totalVotes!: number;
 
-  @Field(() => Int, {
-    description: "Votos no Brasil inteiro, no mesmo período.",
-  })
-  nationalVotes!: number;
+  @Field(() => Int, { description: "Votos desde o início da enquete." })
+  overallVotes!: number;
 
-  @Field(() => Float, { description: "Peso do recorte no total nacional (%)." })
-  shareOfNational!: number;
+  @Field(() => Float, { description: "Peso do período no total (%)." })
+  shareOfOverall!: number;
 
   @Field(() => String, { nullable: true })
   leaderSlug!: string | null;
@@ -38,62 +23,8 @@ export class AnalyticsSummaryDto {
   @Field(() => Float, { description: "Vantagem em pontos percentuais." })
   marginPoints!: number;
 
-  @Field(() => [CandidateStatesWonDto])
-  statesWon!: CandidateStatesWonDto[];
-
-  @Field(() => Int)
-  tiedStates!: number;
-
-  @Field(() => Int)
-  statesWithoutVotes!: number;
-}
-
-@ObjectType()
-export class RegionAnalyticsDto {
-  @Field(() => Int)
-  totalVotes!: number;
-
-  @Field(() => BrazilianRegion)
-  region!: BrazilianRegion;
-
-  @Field()
-  label!: string;
-
-  @Field(() => [StateCandidateResultDto])
-  candidates!: StateCandidateResultDto[];
-
-  @Field(() => String, { nullable: true })
-  leaderSlug!: string | null;
-
-  @Field(() => Float)
-  marginPoints!: number;
-}
-
-@ObjectType()
-export class StateAnalyticsDto {
-  @Field(() => Int)
-  totalVotes!: number;
-
-  @Field()
-  state!: string;
-
-  @Field(() => BrazilianRegion)
-  region!: BrazilianRegion;
-
-  @Field(() => Float, { description: "Peso do estado no recorte (%)." })
-  shareOfSlice!: number;
-
-  @Field(() => [StateCandidateResultDto])
-  candidates!: StateCandidateResultDto[];
-
-  @Field(() => String, { nullable: true })
-  leaderSlug!: string | null;
-
-  @Field(() => Int)
-  marginVotes!: number;
-
-  @Field(() => Float)
-  marginPoints!: number;
+  @Field(() => Int, { description: "Indicados com pelo menos 1 voto." })
+  nomineesWithVotes!: number;
 }
 
 @ObjectType()
@@ -131,14 +62,10 @@ export class PollAnalyticsDto {
   @Field(() => AnalyticsSummaryDto)
   summary!: AnalyticsSummaryDto;
 
-  @Field(() => [CandidateResultDto])
+  @Field(() => [CandidateResultDto], {
+    description: "Votos e percentuais de cada indicado no período.",
+  })
   candidates!: CandidateResultDto[];
-
-  @Field(() => [RegionAnalyticsDto])
-  regions!: RegionAnalyticsDto[];
-
-  @Field(() => [StateAnalyticsDto])
-  states!: StateAnalyticsDto[];
 
   @Field(() => TimelineGranularity)
   granularity!: TimelineGranularity;

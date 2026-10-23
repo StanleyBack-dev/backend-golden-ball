@@ -15,6 +15,7 @@ import { DatabaseModule } from "./database/database.module";
 
 // MODULES
 import { CandidatesModule } from "./modules/candidates/candidates.module";
+import { PlayerStatsModule } from "./modules/player-stats/player-stats.module";
 import { VotesModule } from "./modules/votes/votes.module";
 import { AppController } from "./app.controller";
 
@@ -41,6 +42,7 @@ const IS_DEPLOYED = isDeployedEnv();
     }),
     CandidatesModule,
     VotesModule,
+    PlayerStatsModule,
   ],
 })
 export class AppModule {}

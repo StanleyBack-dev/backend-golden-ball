@@ -33,14 +33,12 @@ export class VoteRecorderService {
   async record(
     voterHash: string,
     candidate: Pick<CandidateEntity, "idCandidates" | "slug">,
-    state: string,
   ): Promise<CastVoteResponseDto> {
     try {
       await this.dataSource.transaction(async (manager) => {
         await manager.insert(VoterEntity, { voterHash });
         await manager.insert(VoteEntity, {
           idCandidates: candidate.idCandidates,
-          state,
         });
       });
     } catch (error) {
@@ -58,7 +56,6 @@ export class VoteRecorderService {
     return {
       registered: true,
       candidateSlug: candidate.slug,
-      state,
       votedAt: new Date().toISOString(),
     };
   }

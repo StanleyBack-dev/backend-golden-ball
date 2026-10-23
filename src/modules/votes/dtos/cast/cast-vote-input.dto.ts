@@ -1,6 +1,5 @@
 import { Field, InputType } from "@nestjs/graphql";
-import { Equals, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
-import { BRAZILIAN_STATES } from "../../../../common/constants/brazilian-states.constant";
+import { Equals, IsOptional, IsString, MaxLength } from "class-validator";
 
 /** The voter's identity comes from the Google session, never from input. */
 @InputType()
@@ -9,10 +8,6 @@ export class CastVoteInputDto {
   @IsString()
   @MaxLength(40)
   candidateSlug!: string;
-
-  @Field()
-  @IsIn(BRAZILIAN_STATES, { message: "Estado inválido." })
-  state!: string;
 
   @Field({ description: "Aceite do aviso de privacidade (LGPD)." })
   @Equals(true, { message: "É necessário aceitar o aviso de privacidade." })

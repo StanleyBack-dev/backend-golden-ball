@@ -9,9 +9,6 @@ export class CastVoteResponseDto {
   @Field()
   candidateSlug!: string;
 
-  @Field()
-  state!: string;
-
   @Field({ description: "Momento do registro, segundo o servidor (ISO 8601)." })
   votedAt!: string;
 }

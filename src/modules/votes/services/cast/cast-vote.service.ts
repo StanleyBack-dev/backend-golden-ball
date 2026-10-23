@@ -48,6 +48,6 @@ export class CastVoteService {
       throw AppException.from(APP_ERRORS.votes.alreadyVoted, undefined);
     }
 
-    return this.voteRecorder.record(session.voterHash, candidate, input.state);
+    return this.voteRecorder.record(session.voterHash, candidate);
   }
 }

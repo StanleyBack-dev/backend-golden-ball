@@ -4,10 +4,9 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { VoteEntity } from "../../entities/vote.entity";
 
-/** Votes for one candidate, in one state, within one hour. */
+/** Votes for one candidate within one hour. */
 export interface TallyRow {
   idCandidates: string;
-  state: string;
   /** Start of the hour bucket, epoch ms. */
   hourMs: number;
   votes: number;
@@ -15,14 +14,13 @@ export interface TallyRow {
 
 interface RawTallyRow {
   idCandidates: string;
-  state: string;
   votedHour: Date | string;
   votes: string;
 }
 
 /**
  * The one aggregate every read endpoint is built from: vote counts grouped
- * by (candidate, state, hour). It's small (candidates × 27 × hours) and
+ * by (candidate, hour). It's small (candidates × hours) and
  * cached briefly per instance, so results and every analytics filter are
  * computed in memory without touching the database again — filters cost
  * nothing and never reach SQL.
@@ -66,17 +64,14 @@ export class VoteTallyService {
     const raw = await this.votesRepository
       .createQueryBuilder("vote")
       .select("vote.idCandidates", "idCandidates")
-      .addSelect("vote.state", "state")
       .addSelect("vote.votedHour", "votedHour")
       .addSelect("COUNT(*)", "votes")
       .groupBy("vote.idCandidates")
-      .addGroupBy("vote.state")
       .addGroupBy("vote.votedHour")
       .getRawMany<RawTallyRow>();
 
     return raw.map((row) => ({
       idCandidates: row.idCandidates,
-      state: row.state,
       hourMs: new Date(row.votedHour).getTime(),
       votes: Number(row.votes),
     }));

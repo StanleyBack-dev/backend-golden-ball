@@ -12,30 +12,6 @@ export class CandidateResultDto extends CandidateDto {
 }
 
 @ObjectType()
-export class StateCandidateResultDto {
-  @Field()
-  slug!: string;
-
-  @Field(() => Int)
-  votes!: number;
-
-  @Field(() => Float, { description: "Percentual dos votos do recorte." })
-  percentage!: number;
-}
-
-@ObjectType()
-export class StateResultDto {
-  @Field()
-  state!: string;
-
-  @Field(() => Int)
-  totalVotes!: number;
-
-  @Field(() => [StateCandidateResultDto])
-  candidates!: StateCandidateResultDto[];
-}
-
-@ObjectType()
 export class PollResultsDto {
   @Field(() => Int)
   totalVotes!: number;
@@ -43,10 +19,7 @@ export class PollResultsDto {
   @Field()
   votingOpen!: boolean;
 
-  @Field({
-    description:
-      "Instante oficial de encerramento (ISO 8601, UTC). Igual para todos os estados.",
-  })
+  @Field({ description: "Instante oficial de encerramento (ISO 8601, UTC)." })
   votingClosesAt!: string;
 
   @Field()
@@ -56,9 +29,6 @@ export class PollResultsDto {
     description: "Indicados na ordem oficial (alfabética).",
   })
   candidates!: CandidateResultDto[];
-
-  @Field(() => [StateResultDto])
-  states!: StateResultDto[];
 }
 
 export const PollResultsQueryResponseDto = createDataResponseDto(

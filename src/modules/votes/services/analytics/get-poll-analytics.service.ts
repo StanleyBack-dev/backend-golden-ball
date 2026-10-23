@@ -1,11 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import {
-  BrazilianRegion,
-  REGION_LABELS,
-  REGION_STATES,
-  STATE_REGION,
-} from "../../../../common/constants/brazilian-regions.constant";
-import { BRAZILIAN_STATES } from "../../../../common/constants/brazilian-states.constant";
 import { AppException } from "../../../../common/exceptions/app-exception";
 import { APP_ERRORS } from "../../../../common/exceptions/app-errors.catalog";
 import {
@@ -15,15 +8,9 @@ import {
 import { PollAnalyticsFilterInput } from "../../dtos/analytics/poll-analytics-filter.input";
 import {
   PollAnalyticsDto,
-  RegionAnalyticsDto,
-  StateAnalyticsDto,
   TimelinePointDto,
 } from "../../dtos/analytics/poll-analytics-response.dto";
-import {
-  SortOrder,
-  StateSortField,
-  TimelineGranularity,
-} from "../../enums/analytics.enums";
+import { TimelineGranularity } from "../../enums/analytics.enums";
 import { computeLead, percentage } from "../../utils/tally-math.util";
 import {
   addToBreakdown,
@@ -41,8 +28,7 @@ const BRASILIA_OFFSET_MS = 3 * HOUR_MS;
 const AUTO_HOURLY_MAX_SPAN_MS = 72 * HOUR_MS;
 const MAX_HOURLY_POINTS = 24 * 14;
 
-interface Scope {
-  states: Set<string>;
+interface Period {
   fromMs: number;
   toMs: number;
 }
@@ -57,7 +43,7 @@ export class GetPollAnalyticsService {
   async execute(
     filter: PollAnalyticsFilterInput = {},
   ): Promise<PollAnalyticsDto> {
-    const scope = this.resolveScope(filter);
+    const period = this.resolvePeriod(filter);
     const [candidates, allRows] = await Promise.all([
       this.getCandidatesService.findAll(),
       this.voteTallyService.rows(),
@@ -66,132 +52,50 @@ export class GetPollAnalyticsService {
     const slugById = new Map(candidates.map((c) => [c.idCandidates, c.slug]));
     const slugs = candidates.map((c) => c.slug);
 
-    // Same period for both the slice and the national baseline.
-    const periodRows = allRows.filter(
-      (row) =>
-        row.hourMs >= scope.fromMs &&
-        row.hourMs <= scope.toMs &&
-        slugById.has(row.idCandidates),
+    const knownRows = allRows.filter((row) => slugById.has(row.idCandidates));
+    const periodRows = knownRows.filter(
+      (row) => row.hourMs >= period.fromMs && row.hourMs <= period.toMs,
     );
-    const sliceRows = periodRows.filter((row) => scope.states.has(row.state));
-    const nationalVotes = periodRows.reduce((sum, row) => sum + row.votes, 0);
-
-    // --- per state -------------------------------------------------------
-    const stateBreakdowns = new Map<string, VoteBreakdown>();
-    for (const row of sliceRows) {
-      const breakdown = stateBreakdowns.get(row.state) ?? emptyBreakdown();
-      addToBreakdown(breakdown, slugById.get(row.idCandidates)!, row.votes);
-      stateBreakdowns.set(row.state, breakdown);
-    }
+    const overallVotes = knownRows.reduce((sum, row) => sum + row.votes, 0);
 
     const slice = emptyBreakdown();
-    for (const breakdown of stateBreakdowns.values()) {
-      mergeBreakdown(slice, breakdown);
+    for (const row of periodRows) {
+      addToBreakdown(slice, slugById.get(row.idCandidates)!, row.votes);
     }
 
-    const allStates: StateAnalyticsDto[] = BRAZILIAN_STATES.filter((uf) =>
-      scope.states.has(uf),
-    ).map((state) =>
-      this.buildStateRow(
-        state,
-        stateBreakdowns.get(state) ?? emptyBreakdown(),
-        slugs,
-        slice.totalVotes,
-      ),
-    );
-
-    // --- slice totals ----------------------------------------------------
-    const sliceShares = candidateShares(slice, slugs);
-    const lead = computeLead(sliceShares, slice.totalVotes);
-
-    // --- regions within the scope ----------------------------------------
-    const regions: RegionAnalyticsDto[] = (
-      Object.keys(REGION_STATES) as BrazilianRegion[]
-    )
-      .filter((region) =>
-        REGION_STATES[region].some((uf) => scope.states.has(uf)),
-      )
-      .map((region) => {
-        const breakdown = emptyBreakdown();
-        for (const uf of REGION_STATES[region]) {
-          const state = stateBreakdowns.get(uf);
-          if (state && scope.states.has(uf)) mergeBreakdown(breakdown, state);
-        }
-        const shares = candidateShares(breakdown, slugs);
-        const regionLead = computeLead(shares, breakdown.totalVotes);
-
-        return {
-          region,
-          label: REGION_LABELS[region],
-          totalVotes: breakdown.totalVotes,
-          candidates: shares,
-          leaderSlug: regionLead.leaderSlug,
-          marginPoints: regionLead.marginPoints,
-        };
-      });
-
-    // --- state list: filter + sort ---------------------------------------
-    const states = this.sortStates(
-      allStates.filter(
-        (row) =>
-          (!filter.leaderSlug || row.leaderSlug === filter.leaderSlug) &&
-          row.totalVotes >= (filter.minVotes ?? 0),
-      ),
-      filter,
-      slugs[0],
-    );
+    const shares = candidateShares(slice, slugs);
+    const lead = computeLead(shares, slice.totalVotes);
+    const sharesBySlug = new Map(shares.map((s) => [s.slug, s]));
 
     const { granularity, timeline } = this.buildTimeline(
-      sliceRows,
+      periodRows,
       slugById,
       slugs,
       filter.granularity,
     );
 
-    const sharesBySlug = new Map(sliceShares.map((s) => [s.slug, s]));
-
     return {
       summary: {
         totalVotes: slice.totalVotes,
-        nationalVotes,
-        shareOfNational: percentage(slice.totalVotes, nationalVotes),
+        overallVotes,
+        shareOfOverall: percentage(slice.totalVotes, overallVotes),
         leaderSlug: lead.leaderSlug,
         marginVotes: lead.marginVotes,
         marginPoints: lead.marginPoints,
-        statesWon: slugs.map((slug) => ({
-          slug,
-          states: allStates.filter((row) => row.leaderSlug === slug).length,
-        })),
-        tiedStates: allStates.filter(
-          (row) => row.totalVotes > 0 && row.leaderSlug === null,
-        ).length,
-        statesWithoutVotes: allStates.filter((row) => row.totalVotes === 0)
-          .length,
+        nomineesWithVotes: shares.filter((s) => s.votes > 0).length,
       },
       candidates: candidates.map((candidate) => ({
         ...toCandidateDto(candidate),
         votes: sharesBySlug.get(candidate.slug)!.votes,
         percentage: sharesBySlug.get(candidate.slug)!.percentage,
       })),
-      regions,
-      states,
       granularity,
       timeline,
       updatedAt: new Date().toISOString(),
     };
   }
 
-  private resolveScope(filter: PollAnalyticsFilterInput): Scope {
-    let states = new Set<string>(BRAZILIAN_STATES);
-
-    if (filter.region) {
-      states = new Set(REGION_STATES[filter.region]);
-    }
-    if (filter.states?.length) {
-      const requested = new Set(filter.states);
-      states = new Set([...states].filter((uf) => requested.has(uf)));
-    }
-
+  private resolvePeriod(filter: PollAnalyticsFilterInput): Period {
     // Votes are stored per hour; a `from` mid-hour includes that whole hour
     // so "last 24h" never drops the bucket in progress.
     const fromMs = filter.from
@@ -203,69 +107,7 @@ export class GetPollAnalyticsService {
       throw AppException.from(APP_ERRORS.votes.invalidPeriod, undefined);
     }
 
-    return { states, fromMs, toMs };
-  }
-
-  private buildStateRow(
-    state: string,
-    breakdown: VoteBreakdown,
-    slugs: string[],
-    sliceTotal: number,
-  ): StateAnalyticsDto {
-    const shares = candidateShares(breakdown, slugs);
-    const lead = computeLead(shares, breakdown.totalVotes);
-
-    return {
-      state,
-      region: STATE_REGION[state],
-      totalVotes: breakdown.totalVotes,
-      shareOfSlice: percentage(breakdown.totalVotes, sliceTotal),
-      candidates: shares,
-      leaderSlug: lead.leaderSlug,
-      marginVotes: lead.marginVotes,
-      marginPoints: lead.marginPoints,
-    };
-  }
-
-  private sortStates(
-    rows: StateAnalyticsDto[],
-    filter: PollAnalyticsFilterInput,
-    defaultCandidate: string,
-  ): StateAnalyticsDto[] {
-    const sortBy = filter.sortBy ?? StateSortField.TOTAL_VOTES;
-    const direction =
-      (filter.order ??
-        (sortBy === StateSortField.STATE ? SortOrder.ASC : SortOrder.DESC)) ===
-      SortOrder.ASC
-        ? 1
-        : -1;
-    const shareSlug = filter.sortCandidateSlug ?? defaultCandidate;
-    const shareOf = (row: StateAnalyticsDto) =>
-      row.candidates.find((c) => c.slug === shareSlug)?.percentage ?? 0;
-
-    const key = (row: StateAnalyticsDto): number | string => {
-      switch (sortBy) {
-        case StateSortField.STATE:
-          return row.state;
-        case StateSortField.MARGIN:
-          return row.marginPoints;
-        case StateSortField.CANDIDATE_SHARE:
-          return shareOf(row);
-        default:
-          return row.totalVotes;
-      }
-    };
-
-    return [...rows].sort((a, b) => {
-      const ka = key(a);
-      const kb = key(b);
-      const cmp =
-        typeof ka === "string"
-          ? ka.localeCompare(kb as string)
-          : ka - (kb as number);
-      // Stable, predictable tie-break: alphabetical by UF.
-      return cmp * direction || a.state.localeCompare(b.state);
-    });
+    return { fromMs, toMs };
   }
 
   private buildTimeline(

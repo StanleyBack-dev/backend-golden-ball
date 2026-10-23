@@ -1,6 +1,6 @@
 import { percentage } from "./tally-math.util";
 
-/** Vote counts for one slice (country, region, state, time bucket). */
+/** Vote counts for one slice (whole poll, period or time bucket). */
 export interface VoteBreakdown {
   totalVotes: number;
   byCandidate: Map<string, number>;

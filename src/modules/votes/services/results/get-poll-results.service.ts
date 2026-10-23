@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import { BRAZILIAN_STATES } from "../../../../common/constants/brazilian-states.constant";
 import {
   GetCandidatesService,
   toCandidateDto,
@@ -9,7 +8,6 @@ import {
   addToBreakdown,
   candidateShares,
   emptyBreakdown,
-  VoteBreakdown,
 } from "../../utils/vote-breakdown.util";
 import { VoteTallyService } from "../tally/vote-tally.service";
 import { VotingWindowService } from "../voting-window.service";
@@ -31,16 +29,12 @@ export class GetPollResultsService {
     const slugById = new Map(candidates.map((c) => [c.idCandidates, c.slug]));
     const slugs = candidates.map((c) => c.slug);
     const national = emptyBreakdown();
-    const byState = new Map<string, VoteBreakdown>();
 
     for (const row of rows) {
       const slug = slugById.get(row.idCandidates);
       if (!slug) continue;
 
       addToBreakdown(national, slug, row.votes);
-      const state = byState.get(row.state) ?? emptyBreakdown();
-      addToBreakdown(state, slug, row.votes);
-      byState.set(row.state, state);
     }
 
     const shares = new Map(
@@ -59,14 +53,6 @@ export class GetPollResultsService {
         votes: shares.get(candidate.slug)!.votes,
         percentage: shares.get(candidate.slug)!.percentage,
       })),
-      states: BRAZILIAN_STATES.map((state) => {
-        const breakdown = byState.get(state) ?? emptyBreakdown();
-        return {
-          state,
-          totalVotes: breakdown.totalVotes,
-          candidates: candidateShares(breakdown, slugs),
-        };
-      }),
     };
   }
 }
