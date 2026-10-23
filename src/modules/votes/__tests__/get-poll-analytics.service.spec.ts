@@ -1,10 +1,5 @@
 import { HttpException } from "@nestjs/common";
-import { BrazilianRegion } from "../../../common/constants/brazilian-regions.constant";
-import {
-  SortOrder,
-  StateSortField,
-  TimelineGranularity,
-} from "../enums/analytics.enums";
+import { TimelineGranularity } from "../enums/analytics.enums";
 import { GetPollAnalyticsService } from "../services/analytics/get-poll-analytics.service";
 import { TallyRow } from "../services/tally/vote-tally.service";
 
@@ -27,28 +22,20 @@ const OPTIONS = [
 
 type Slug = "vinicius-junior" | "lamine-yamal" | "harry-kane";
 
-const row = (
-  slug: Slug,
-  state: string,
-  hour: number,
-  votes: number,
-): TallyRow => ({
+const row = (slug: Slug, hour: number, votes: number): TallyRow => ({
   idCandidates: OPTIONS.find((o) => o.slug === slug)!.idCandidates,
-  state,
   hourMs: T0 + hour * H,
   votes,
 });
 
-// SP: Vini 6 x 4 · RJ: Yamal 3 x 1 · BA: Vini 5 x 0 · PR: 2 x 2 (tie)
+// Vini 14 x 9 Yamal, spread over three hours.
 const ROWS: TallyRow[] = [
-  row("vinicius-junior", "SP", 0, 4),
-  row("vinicius-junior", "SP", 2, 2),
-  row("lamine-yamal", "SP", 1, 4),
-  row("lamine-yamal", "RJ", 0, 3),
-  row("vinicius-junior", "RJ", 2, 1),
-  row("vinicius-junior", "BA", 1, 5),
-  row("vinicius-junior", "PR", 0, 2),
-  row("lamine-yamal", "PR", 2, 2),
+  row("vinicius-junior", 0, 6),
+  row("lamine-yamal", 0, 3),
+  row("vinicius-junior", 1, 5),
+  row("lamine-yamal", 1, 4),
+  row("vinicius-junior", 2, 3),
+  row("lamine-yamal", 2, 2),
 ];
 
 function setup(rows = ROWS) {
@@ -62,92 +49,44 @@ const pct = (data: { candidates: { slug: string; percentage: number }[] }) =>
   Object.fromEntries(data.candidates.map((c) => [c.slug, c.percentage]));
 
 describe("GetPollAnalyticsService", () => {
-  it("summarizes the whole country", async () => {
+  it("summarizes the whole poll", async () => {
     const result = await setup().execute();
 
-    expect(result.summary.totalVotes).toBe(23);
-    expect(result.summary.nationalVotes).toBe(23);
-    expect(result.summary.shareOfNational).toBe(100);
-    expect(result.summary.leaderSlug).toBe("vinicius-junior");
-    expect(result.summary.marginVotes).toBe(14 - 9);
-    expect(result.summary.statesWon).toEqual([
-      { slug: "vinicius-junior", states: 2 },
-      { slug: "lamine-yamal", states: 1 },
-      { slug: "harry-kane", states: 0 },
-    ]);
-    expect(result.summary.tiedStates).toBe(1);
-    expect(result.summary.statesWithoutVotes).toBe(27 - 4);
-    expect(result.states).toHaveLength(27);
-  });
-
-  it("filters by region, keeping the national baseline", async () => {
-    const result = await setup().execute({ region: BrazilianRegion.SUDESTE });
-
-    expect(result.states.map((s) => s.state).sort()).toEqual([
-      "ES",
-      "MG",
-      "RJ",
-      "SP",
-    ]);
-    expect(result.summary.totalVotes).toBe(14);
-    expect(result.summary.nationalVotes).toBe(23);
-    expect(result.regions.map((r) => r.region)).toEqual([
-      BrazilianRegion.SUDESTE,
-    ]);
-    expect(pct(result)).toEqual({
-      "vinicius-junior": 50,
-      "lamine-yamal": 50,
-      "harry-kane": 0,
+    expect(result.summary).toEqual({
+      totalVotes: 23,
+      overallVotes: 23,
+      shareOfOverall: 100,
+      leaderSlug: "vinicius-junior",
+      marginVotes: 14 - 9,
+      marginPoints: 21.74,
+      nomineesWithVotes: 2,
     });
-    expect(result.summary.leaderSlug).toBeNull();
-  });
-
-  it("intersects region and explicit states", async () => {
-    const result = await setup().execute({
-      region: BrazilianRegion.SUDESTE,
-      states: ["SP", "BA"],
-    });
-    expect(result.states.map((s) => s.state)).toEqual(["SP"]);
-  });
-
-  it("filters states by leader and minimum votes", async () => {
-    const byLeader = await setup().execute({ leaderSlug: "vinicius-junior" });
-    expect(byLeader.states.map((s) => s.state)).toEqual(["SP", "BA"]);
-
-    const byMin = await setup().execute({ minVotes: 6 });
-    expect(byMin.states.map((s) => s.state)).toEqual(["SP"]);
-    const inclusive = await setup().execute({ minVotes: 5 });
-    expect(inclusive.states.map((s) => s.state)).toEqual(["SP", "BA"]);
-  });
-
-  it("sorts by candidate share and by state", async () => {
-    const byShare = await setup().execute({
-      minVotes: 1,
-      sortBy: StateSortField.CANDIDATE_SHARE,
-      sortCandidateSlug: "lamine-yamal",
-      order: SortOrder.DESC,
-    });
-    expect(byShare.states.map((s) => s.state)).toEqual([
-      "RJ",
-      "PR",
-      "SP",
-      "BA",
-    ]);
-
-    const alpha = await setup().execute({
-      minVotes: 1,
-      sortBy: StateSortField.STATE,
-    });
-    expect(alpha.states.map((s) => s.state)).toEqual(["BA", "PR", "RJ", "SP"]);
   });
 
   it("restricts the period, rounding `from` down to the hour", async () => {
     const result = await setup().execute({
       from: new Date(T0 + 2 * H + 30 * 60_000).toISOString(),
     });
-    // Only hour 2: SP vini 2, RJ vini 1, PR yamal 2
-    expect(result.summary.totalVotes).toBe(5);
-    expect(result.summary.nationalVotes).toBe(5);
+
+    // Only hour 2: Vini 3 x 2 Yamal, against 23 overall.
+    expect(result.summary).toMatchObject({
+      totalVotes: 5,
+      overallVotes: 23,
+      shareOfOverall: 21.74,
+      leaderSlug: "vinicius-junior",
+    });
+    expect(pct(result)).toEqual({
+      "vinicius-junior": 60,
+      "lamine-yamal": 40,
+      "harry-kane": 0,
+    });
+  });
+
+  it("closes the period with `to`", async () => {
+    const result = await setup().execute({
+      to: new Date(T0 + H).toISOString(),
+    });
+    expect(result.summary.totalVotes).toBe(18);
   });
 
   it("rejects a period that ends before it starts", async () => {
@@ -173,22 +112,16 @@ describe("GetPollAnalyticsService", () => {
   });
 
   it("switches to daily buckets cut at midnight Brasília", async () => {
-    const rows = [
-      // 02:00 UTC = 23:00 Brasília (day 1) · 04:00 UTC = 01:00 Brasília (day 2)
-      {
-        ...row("vinicius-junior", "SP", 0, 1),
-        hourMs: Date.parse("2026-10-20T02:00:00Z"),
-      },
-      {
-        ...row("vinicius-junior", "SP", 0, 1),
-        hourMs: Date.parse("2026-10-20T04:00:00Z"),
-      },
-      {
-        ...row("vinicius-junior", "SP", 0, 1),
-        hourMs: Date.parse("2026-10-24T04:00:00Z"),
-      },
-    ];
-    const { timeline, granularity } = await setup(rows).execute();
+    const at = (iso: string) => ({
+      ...row("vinicius-junior", 0, 1),
+      hourMs: Date.parse(iso),
+    });
+    // 02:00 UTC = 23:00 Brasília (day 1) · 04:00 UTC = 01:00 Brasília (day 2)
+    const { timeline, granularity } = await setup([
+      at("2026-10-20T02:00:00Z"),
+      at("2026-10-20T04:00:00Z"),
+      at("2026-10-24T04:00:00Z"),
+    ]).execute();
 
     expect(granularity).toBe(TimelineGranularity.DAY);
     expect(timeline[0].at).toBe("2026-10-19T03:00:00.000Z");
@@ -200,17 +133,20 @@ describe("GetPollAnalyticsService", () => {
 
   it("returns an empty timeline when there are no votes", async () => {
     const result = await setup([]).execute();
+
     expect(result.timeline).toEqual([]);
-    expect(result.summary.leaderSlug).toBeNull();
-    expect(result.summary.shareOfNational).toBe(0);
+    expect(result.summary).toMatchObject({
+      leaderSlug: null,
+      shareOfOverall: 0,
+      nomineesWithVotes: 0,
+    });
   });
 
   it("ranks a three-way race by the top two", async () => {
-    // SP: Vini 5, Yamal 3, Kane 2 → 10 total
     const result = await setup([
-      row("vinicius-junior", "SP", 0, 5),
-      row("lamine-yamal", "SP", 0, 3),
-      row("harry-kane", "SP", 1, 2),
+      row("vinicius-junior", 0, 5),
+      row("lamine-yamal", 0, 3),
+      row("harry-kane", 1, 2),
     ]).execute();
 
     expect(result.summary).toMatchObject({
@@ -218,6 +154,7 @@ describe("GetPollAnalyticsService", () => {
       leaderSlug: "vinicius-junior",
       marginVotes: 2,
       marginPoints: 20,
+      nomineesWithVotes: 3,
     });
     expect(pct(result)).toEqual({
       "vinicius-junior": 50,
@@ -234,15 +171,12 @@ describe("GetPollAnalyticsService", () => {
 
   it("has no leader when the top two are tied, even with a third behind", async () => {
     const result = await setup([
-      row("vinicius-junior", "AC", 0, 2),
-      row("lamine-yamal", "AC", 0, 2),
-      row("harry-kane", "AC", 0, 1),
+      row("vinicius-junior", 0, 2),
+      row("lamine-yamal", 0, 2),
+      row("harry-kane", 0, 1),
     ]).execute();
 
-    const ac = result.states.find((s) => s.state === "AC")!;
-    expect(ac.totalVotes).toBe(5);
-    expect(ac.leaderSlug).toBeNull();
-    expect(result.summary.tiedStates).toBe(1);
-    expect(result.summary.statesWithoutVotes).toBe(26);
+    expect(result.summary.leaderSlug).toBeNull();
+    expect(result.summary.marginVotes).toBe(0);
   });
 });

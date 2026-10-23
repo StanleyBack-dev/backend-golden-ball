@@ -15,6 +15,16 @@ export const RESPONSE_MESSAGES = {
       message: "Indicados carregados com sucesso.",
     },
   },
+  playerStats: {
+    leaderboardFetched: {
+      code: "PLAYER_STATS_LEADERBOARD_FETCHED",
+      message: "Estatísticas dos indicados carregadas com sucesso.",
+    },
+    nomineeFetched: {
+      code: "PLAYER_STATS_NOMINEE_FETCHED",
+      message: "Estatísticas do jogador carregadas com sucesso.",
+    },
+  },
   votes: {
     cast: {
       code: "VOTE_CAST",

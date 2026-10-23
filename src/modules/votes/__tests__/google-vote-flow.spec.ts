@@ -72,7 +72,6 @@ function setup() {
 const voteInput = (overrides: Partial<CastVoteInputDto> = {}) =>
   ({
     candidateSlug: "vinicius-junior",
-    state: "SP",
     privacyConsent: true,
     ...overrides,
   }) as CastVoteInputDto;

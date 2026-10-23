@@ -38,6 +38,19 @@ export class CandidateEntity {
   @Column({ name: "color", type: "varchar", length: 7 })
   color!: string;
 
+  /** The player's id at the stats provider (Highlightly). */
+  @Column({ name: "stats_provider_id", type: "integer", nullable: true })
+  statsProviderId!: number | null;
+
+  /** National team name as the stats provider spells it ("Brazil"). */
+  @Column({
+    name: "national_team",
+    type: "varchar",
+    length: 60,
+    nullable: true,
+  })
+  nationalTeam!: string | null;
+
   @Column({ name: "display_order", type: "smallint", default: 0 })
   displayOrder!: number;
 

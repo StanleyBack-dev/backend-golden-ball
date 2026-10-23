@@ -22,7 +22,7 @@ describe("VotingWindowService", () => {
     expect(service.isOpen(new Date("2026-10-26T20:00:00.000Z"))).toBe(false);
   });
 
-  it("closes at the same instant for every state (unified Brasília time)", () => {
+  it("closes at the official Brasília instant", () => {
     // 16h in Manaus (UTC-4) and 15h in Rio Branco (UTC-5) are the same instant.
     expect(service.isOpen(new Date("2026-10-26T16:00:00-04:00"))).toBe(false);
     expect(service.isOpen(new Date("2026-10-26T15:00:00-05:00"))).toBe(false);

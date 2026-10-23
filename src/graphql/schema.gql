@@ -44,6 +44,326 @@ type GetCandidatesQueryResponseDto {
   data: [CandidateDto!]!
 }
 
+type StatLineDto {
+  gamesPlayed: Int!
+  minutesPlayed: Int!
+  goals: Int!
+  assists: Int!
+
+  """
+  Gols + assistências.
+  """
+  goalContributions: Int!
+  penaltiesScored: Int!
+  yellowCards: Int!
+  redCards: Int!
+
+  """
+  Gols por 90 minutos.
+  """
+  goalsPer90: Float!
+
+  """
+  Gols + assistências por 90 minutos.
+  """
+  contributionsPer90: Float!
+
+  """
+  Minutos por gol.
+  """
+  minutesPerGoal: Int
+}
+
+type CompetitionStatsDto {
+  gamesPlayed: Int!
+  minutesPlayed: Int!
+  goals: Int!
+  assists: Int!
+
+  """
+  Gols + assistências.
+  """
+  goalContributions: Int!
+  penaltiesScored: Int!
+  yellowCards: Int!
+  redCards: Int!
+
+  """
+  Gols por 90 minutos.
+  """
+  goalsPer90: Float!
+
+  """
+  Gols + assistências por 90 minutos.
+  """
+  contributionsPer90: Float!
+
+  """
+  Minutos por gol.
+  """
+  minutesPerGoal: Int
+  competition: String!
+  category: CompetitionCategory!
+
+  """
+  Clube ou seleção.
+  """
+  team: String!
+  season: String!
+  substitutedIn: Int!
+  substitutedOut: Int!
+
+  """
+  Nota média (só jogos com box score).
+  """
+  averageRating: Float
+}
+
+enum CompetitionCategory {
+  LEAGUE
+  DOMESTIC_CUP
+  CONTINENTAL
+  NATIONAL_TEAM
+  OTHER
+}
+
+type TeamStatsDto {
+  gamesPlayed: Int!
+  minutesPlayed: Int!
+  goals: Int!
+  assists: Int!
+
+  """
+  Gols + assistências.
+  """
+  goalContributions: Int!
+  penaltiesScored: Int!
+  yellowCards: Int!
+  redCards: Int!
+
+  """
+  Gols por 90 minutos.
+  """
+  goalsPer90: Float!
+
+  """
+  Gols + assistências por 90 minutos.
+  """
+  contributionsPer90: Float!
+
+  """
+  Minutos por gol.
+  """
+  minutesPerGoal: Int
+  team: String!
+
+  """
+  Seleção (true) ou clube.
+  """
+  isNationalTeam: Boolean!
+}
+
+type PlayerMatchStatsDto {
+  competition: String!
+  round: String
+
+  """
+  Data da partida (ISO 8601).
+  """
+  playedAt: String!
+  team: String!
+  opponent: String!
+  isHome: Boolean!
+
+  """
+  Placar, mandante primeiro.
+  """
+  score: String
+  resultDescription: String
+  position: String
+  isSubstitute: Boolean!
+  isCaptain: Boolean!
+  minutesPlayed: Int!
+  rating: Float
+  goals: Int!
+  assists: Int!
+  shotsTotal: Int!
+  shotsOnTarget: Int!
+  passesTotal: Int!
+  passesSuccessful: Int!
+  keyPasses: Int!
+  dribblesTotal: Int!
+  dribblesSuccessful: Int!
+  duelsTotal: Int!
+  duelsWon: Int!
+  tackles: Int!
+  interceptions: Int!
+  foulsCommitted: Int!
+  foulsSuffered: Int!
+  yellowCards: Int!
+  redCards: Int!
+  expectedGoals: Float
+  expectedAssists: Float
+}
+
+type MatchTotalsDto {
+  matches: Int!
+  averageRating: Float
+  shotsTotal: Int!
+  shotsOnTarget: Int!
+  keyPasses: Int!
+
+  """
+  Acerto de passes (%).
+  """
+  passAccuracy: Float!
+
+  """
+  Dribles certos (%).
+  """
+  dribbleSuccess: Float!
+
+  """
+  Duelos ganhos (%).
+  """
+  duelsWonRate: Float!
+  tackles: Int!
+  interceptions: Int!
+}
+
+type NomineeSeasonStatsDto {
+  nominee: CandidateDto!
+
+  """
+  Temporada de clubes (ex.: 25/26).
+  """
+  clubSeason: String!
+  scope: StatsScope!
+
+  """
+  Totais do recorte filtrado.
+  """
+  totals: StatLineDto!
+  averageRating: Float
+  competitions: [CompetitionStatsDto!]!
+
+  """
+  Totais por clube/seleção.
+  """
+  teams: [TeamStatsDto!]!
+
+  """
+  Jogos com box score (seleção), do mais recente.
+  """
+  matches: [PlayerMatchStatsDto!]!
+
+  """
+  Números detalhados dos jogos com box score.
+  """
+  matchTotals: MatchTotalsDto
+  dataUpdatedAt: String
+
+  """
+  Falso enquanto a sincronização diária ainda completa os dados.
+  """
+  dataComplete: Boolean!
+}
+
+enum StatsScope {
+  ALL
+  CLUB
+  LEAGUE
+  DOMESTIC_CUP
+  CONTINENTAL
+  NATIONAL_TEAM
+}
+
+type LeaderboardRowDto {
+  gamesPlayed: Int!
+  minutesPlayed: Int!
+  goals: Int!
+  assists: Int!
+
+  """
+  Gols + assistências.
+  """
+  goalContributions: Int!
+  penaltiesScored: Int!
+  yellowCards: Int!
+  redCards: Int!
+
+  """
+  Gols por 90 minutos.
+  """
+  goalsPer90: Float!
+
+  """
+  Gols + assistências por 90 minutos.
+  """
+  contributionsPer90: Float!
+
+  """
+  Minutos por gol.
+  """
+  minutesPerGoal: Int
+  rank: Int!
+  nominee: CandidateDto!
+  averageRating: Float
+
+  """
+  Competições disputadas no recorte.
+  """
+  competitionsPlayed: Int!
+}
+
+type CompetitionOptionDto {
+  competition: String!
+  category: CompetitionCategory!
+
+  """
+  Indicados que disputaram.
+  """
+  nominees: Int!
+}
+
+type PlayerStatsLeaderboardDto {
+  """
+  Temporada de clubes (ex.: 25/26).
+  """
+  clubSeason: String!
+  scope: StatsScope!
+  rows: [LeaderboardRowDto!]!
+
+  """
+  Competições disponíveis para filtrar.
+  """
+  competitions: [CompetitionOptionDto!]!
+
+  """
+  Última sincronização com dados (ISO 8601).
+  """
+  dataUpdatedAt: String
+
+  """
+  Falso enquanto a sincronização diária ainda completa os dados.
+  """
+  dataComplete: Boolean!
+}
+
+type PlayerStatsLeaderboardQueryResponseDto {
+  success: Boolean!
+  message: String
+  code: String
+  data: PlayerStatsLeaderboardDto!
+}
+
+type NomineeSeasonStatsQueryResponseDto {
+  success: Boolean!
+  message: String
+  code: String
+  data: NomineeSeasonStatsDto!
+}
+
 type CandidateResultDto {
   slug: String!
 
@@ -85,28 +405,12 @@ type CandidateResultDto {
   percentage: Float!
 }
 
-type StateCandidateResultDto {
-  slug: String!
-  votes: Int!
-
-  """
-  Percentual dos votos do recorte.
-  """
-  percentage: Float!
-}
-
-type StateResultDto {
-  state: String!
-  totalVotes: Int!
-  candidates: [StateCandidateResultDto!]!
-}
-
 type PollResultsDto {
   totalVotes: Int!
   votingOpen: Boolean!
 
   """
-  Instante oficial de encerramento (ISO 8601, UTC). Igual para todos os estados.
+  Instante oficial de encerramento (ISO 8601, UTC).
   """
   votingClosesAt: String!
   updatedAt: String!
@@ -115,7 +419,6 @@ type PollResultsDto {
   Indicados na ordem oficial (alfabética).
   """
   candidates: [CandidateResultDto!]!
-  states: [StateResultDto!]!
 }
 
 type PollResultsQueryResponseDto {
@@ -125,23 +428,21 @@ type PollResultsQueryResponseDto {
   data: PollResultsDto!
 }
 
-type CandidateStatesWonDto {
-  slug: String!
-  states: Int!
-}
-
 type AnalyticsSummaryDto {
+  """
+  Votos dentro do período.
+  """
   totalVotes: Int!
 
   """
-  Votos no Brasil inteiro, no mesmo período.
+  Votos desde o início da enquete.
   """
-  nationalVotes: Int!
+  overallVotes: Int!
 
   """
-  Peso do recorte no total nacional (%).
+  Peso do período no total (%).
   """
-  shareOfNational: Float!
+  shareOfOverall: Float!
   leaderSlug: String
   marginVotes: Int!
 
@@ -149,44 +450,11 @@ type AnalyticsSummaryDto {
   Vantagem em pontos percentuais.
   """
   marginPoints: Float!
-  statesWon: [CandidateStatesWonDto!]!
-  tiedStates: Int!
-  statesWithoutVotes: Int!
-}
-
-type RegionAnalyticsDto {
-  totalVotes: Int!
-  region: BrazilianRegion!
-  label: String!
-  candidates: [StateCandidateResultDto!]!
-  leaderSlug: String
-  marginPoints: Float!
-}
-
-"""
-Regiões geográficas do IBGE.
-"""
-enum BrazilianRegion {
-  NORTE
-  NORDESTE
-  CENTRO_OESTE
-  SUDESTE
-  SUL
-}
-
-type StateAnalyticsDto {
-  totalVotes: Int!
-  state: String!
-  region: BrazilianRegion!
 
   """
-  Peso do estado no recorte (%).
+  Indicados com pelo menos 1 voto.
   """
-  shareOfSlice: Float!
-  candidates: [StateCandidateResultDto!]!
-  leaderSlug: String
-  marginVotes: Int!
-  marginPoints: Float!
+  nomineesWithVotes: Int!
 }
 
 type TimelineCandidateDto {
@@ -216,9 +484,11 @@ type TimelinePointDto {
 
 type PollAnalyticsDto {
   summary: AnalyticsSummaryDto!
+
+  """
+  Votos e percentuais de cada indicado no período.
+  """
   candidates: [CandidateResultDto!]!
-  regions: [RegionAnalyticsDto!]!
-  states: [StateAnalyticsDto!]!
   granularity: TimelineGranularity!
   timeline: [TimelinePointDto!]!
   updatedAt: String!
@@ -239,7 +509,6 @@ type PollAnalyticsQueryResponseDto {
 type CastVoteResponseDto {
   registered: Boolean!
   candidateSlug: String!
-  state: String!
 
   """
   Momento do registro, segundo o servidor (ISO 8601).
@@ -303,16 +572,24 @@ type Query {
   ): PollAnalyticsQueryResponseDto!
   currentVoter: CurrentVoterQueryResponseDto!
   pollResults: PollResultsQueryResponseDto!
+
+  """
+  Os 30 indicados lado a lado na temporada, com filtros.
+  """
+  playerStatsLeaderboard(
+    filter: PlayerStatsLeaderboardFilterInput
+  ): PlayerStatsLeaderboardQueryResponseDto!
+
+  """
+  Temporada completa de um indicado, por competição e jogo.
+  """
+  nomineeSeasonStats(
+    slug: String!
+    filter: PlayerStatsFilterInput
+  ): NomineeSeasonStatsQueryResponseDto!
 }
 
 input PollAnalyticsFilterInput {
-  region: BrazilianRegion
-
-  """
-  UFs. Combinado com `region`, vale a interseção.
-  """
-  states: [String!]
-
   """
   Início do período (ISO 8601 com fuso).
   """
@@ -324,34 +601,61 @@ input PollAnalyticsFilterInput {
   to: String
 
   """
-  Somente estados em que este candidato lidera.
-  """
-  leaderSlug: String
-
-  """
-  Somente estados com pelo menos N votos.
-  """
-  minVotes: Int
-  sortBy: StateSortField
-  sortCandidateSlug: String
-  order: SortOrder
-
-  """
   Padrão automático: hora até 72h de período, dia acima disso.
   """
   granularity: TimelineGranularity
 }
 
-enum StateSortField {
-  TOTAL_VOTES
-  STATE
-  MARGIN
-  CANDIDATE_SHARE
+input PlayerStatsLeaderboardFilterInput {
+  """
+  Competições consideradas (padrão: todas).
+  """
+  scope: StatsScope
+
+  """
+  Somente esta competição (nome exato, ex.: LaLiga).
+  """
+  competition: String
+
+  """
+  Posição (ex.: Atacante).
+  """
+  position: String
+
+  """
+  Somente jogadores com pelo menos N minutos no recorte.
+  """
+  minMinutes: Int
+  sortBy: LeaderboardSortField
+  order: SortOrder
+}
+
+enum LeaderboardSortField {
+  GOALS
+  ASSISTS
+  GOAL_CONTRIBUTIONS
+  GAMES
+  MINUTES
+  GOALS_PER_90
+  CONTRIBUTIONS_PER_90
+  AVERAGE_RATING
 }
 
 enum SortOrder {
   ASC
   DESC
+}
+
+input PlayerStatsFilterInput {
+  """
+  Competições consideradas (padrão: todas).
+  """
+  scope: StatsScope
+
+  """
+  Somente esta competição (nome exato, ex.: LaLiga).
+  """
+  competition: String
 }
 
 type Mutation {
@@ -363,7 +667,6 @@ type Mutation {
 
 input CastVoteInputDto {
   candidateSlug: String!
-  state: String!
 
   """
   Aceite do aviso de privacidade (LGPD).

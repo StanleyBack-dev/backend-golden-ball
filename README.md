@@ -19,30 +19,35 @@ Gere segredos com `node -e "console.log(require('crypto').randomBytes(48).toStri
 
 ## API (GraphQL)
 
-| Operação           | Tipo     | Descrição                                                        |
-| ------------------ | -------- | ---------------------------------------------------------------- |
-| `candidates`       | Query    | Os 30 indicados (ordem oficial)                                  |
-| `pollResults`      | Query    | Totais, % por indicado e votos por estado                        |
-| `pollAnalytics`    | Query    | Análise com filtros (região, estados, período, líder, ordenação) |
-| `signInWithGoogle` | Mutation | Troca o ID token do Google por uma sessão de votação             |
-| `currentVoter`     | Query    | Quem está logado e se já votou (requer `Authorization: Bearer`)  |
-| `castVote`         | Mutation | Registra o voto da conta Google logada                           |
+| Operação                 | Tipo     | Descrição                                                        |
+| ------------------------ | -------- | ---------------------------------------------------------------- |
+| `candidates`             | Query    | Os 30 indicados (ordem oficial)                                  |
+| `pollResults`            | Query    | Totais e % por indicado                                          |
+| `pollAnalytics`          | Query    | Análise por período (`from`, `to`, `granularity`)                |
+| `signInWithGoogle`       | Mutation | Troca o ID token do Google por uma sessão de votação             |
+| `currentVoter`           | Query    | Quem está logado e se já votou (requer `Authorization: Bearer`)  |
+| `castVote`               | Mutation | Registra o voto da conta Google logada                           |
+| `playerStatsLeaderboard` | Query    | Os 30 indicados lado a lado na temporada, com filtros            |
+| `nomineeSeasonStats`     | Query    | Temporada de um indicado: por competição, por time e jogo a jogo |
 
 ### Filtros de `pollAnalytics`
 
-Todos opcionais e combináveis, aplicados em memória sobre uma única contagem em cache — não geram consultas extras ao banco.
+Todos opcionais, aplicados em memória sobre uma única contagem em cache — não geram consultas extras ao banco.
 
-| Campo               | Valores                                                    |
-| ------------------- | ---------------------------------------------------------- |
-| `region`            | `NORTE`, `NORDESTE`, `CENTRO_OESTE`, `SUDESTE`, `SUL`      |
-| `states`            | Lista de UFs (`["SP", "RJ"]`)                              |
-| `from` / `to`       | ISO 8601 com fuso (`2026-10-24T00:00:00-03:00`)            |
-| `leaderSlug`        | Só estados em que o jogador lidera                         |
-| `minVotes`          | Só estados com pelo menos N votos                          |
-| `sortBy`            | `TOTAL_VOTES`, `STATE`, `MARGIN`, `CANDIDATE_SHARE`        |
-| `sortCandidateSlug` | Jogador usado com `CANDIDATE_SHARE`                        |
-| `order`             | `ASC`, `DESC`                                              |
-| `granularity`       | `HOUR`, `DAY` (padrão: hora até 72h de período, dia acima) |
+| Campo         | Valores                                                    |
+| ------------- | ---------------------------------------------------------- |
+| `from` / `to` | ISO 8601 com fuso (`2026-10-24T00:00:00-03:00`)            |
+| `granularity` | `HOUR`, `DAY` (padrão: hora até 72h de período, dia acima) |
+
+### Filtros das estatísticas
+
+| Campo                        | Valores                                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `scope`                      | `ALL`, `CLUB`, `LEAGUE`, `DOMESTIC_CUP`, `CONTINENTAL`, `NATIONAL_TEAM`                                                                |
+| `competition`                | Nome exato da competição (ex.: `LaLiga`)                                                                                               |
+| `position` (ranking)         | `Atacante`, `Meio-campista`, `Lateral`, `Zagueiro`                                                                                     |
+| `minMinutes` (ranking)       | Minutos mínimos no recorte                                                                                                             |
+| `sortBy` / `order` (ranking) | `GOALS`, `ASSISTS`, `GOAL_CONTRIBUTIONS`, `GAMES`, `MINUTES`, `GOALS_PER_90`, `CONTRIBUTIONS_PER_90`, `AVERAGE_RATING` / `ASC`, `DESC` |
 
 ## Regras de votação
 
@@ -66,6 +71,20 @@ No Google Cloud Console (Credenciais → ID do cliente OAuth → Aplicativo da W
 - **API fechada:** em produção só aceita chamadas do BFF (`INTERNAL_API_SECRET`). IPs só como HMAC.
 - **Hardening:** helmet, corpo limitado a 10 KB, whitelist de campos, introspecção desligada em produção, erros internos não vazam, tokens redigidos de logs.
 
+## Estatísticas dos indicados
+
+Vêm da [Highlightly Football API](https://highlightly.net/football-api/) (RapidAPI, plano grátis de 100 requisições/dia):
+
+- **Clubes:** totais da temporada `PLAYER_STATS_CLUB_SEASON` (`25/26`) por competição e clube.
+- **Seleção:** box score de cada jogo da Copa do Mundo 2026 (`PLAYER_STATS_NATIONAL_LEAGUE_ID` / `PLAYER_STATS_NATIONAL_SEASON`) — nota, chutes, passes, dribles, duelos etc.
+
+O site **nunca** chama o provedor: a API só lê as tabelas `tb_player_*`, preenchidas pela sincronização diária (`src/jobs/sync-player-stats.ts`):
+
+- **Janela fechada** (`PLAYER_STATS_WINDOW_CLOSED=true`, padrão): a temporada e a Copa já acabaram, então os números são finais. O job só busca o que ainda falta e, depois de uma execução completa, para de chamar a API (as execuções seguintes custam zero requisições). Para uma nova janela, aponte as variáveis `PLAYER_STATS_*` para ela e use `false` para atualizar todo dia.
+- **Agendamento:** workflow `sync-player-stats.yml` (GitHub Actions) às 10:00, 17:00 e 23:50 de Brasília. Enquanto a carga não termina, cada execução retoma de onde a anterior parou: cada box score é lido uma vez só e cada execução respeita `PLAYER_STATS_REQUEST_BUDGET`. Se uma falhar, a próxima completa; o site continua com os dados já gravados e avisa enquanto a carga estiver incompleta (`dataComplete: false`).
+- **Histórico:** cada execução fica em `tb_stats_sync_runs` (`success`, `partial`, `failed`).
+- **Manual:** `npm run stats:sync:dev` (local) ou "Run workflow" no GitHub (com `force` para ignorar a execução do dia).
+
 ## Migrations
 
 Rodam no boot (local e produção) por `MigrationsRunnerService`, numa única transação protegida por `pg_advisory_xact_lock`. Assim, várias instâncias subindo juntas na Vercel não aplicam a mesma migration duas vezes, inclusive pelo endpoint _pooled_ do Neon. Desligue com `DB_MIGRATIONS_RUN=false`.
@@ -74,7 +93,7 @@ Rodam no boot (local e produção) por `MigrationsRunnerService`, numa única tr
 
 O workflow `deploy.yml` publica após o CI passar na `master`.
 
-- **Secrets do GitHub:** `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
+- **Secrets do GitHub:** `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` e, para a sincronização das estatísticas, `DATABASE_URL` (o mesmo banco da produção) e `HIGHLIGHTLY_API_KEY`.
 - **Variáveis de ambiente na Vercel:** `NODE_ENV=production`, `DATABASE_URL`, `FRONTEND_URL`, `VOTER_HASH_SECRET`, `INTERNAL_API_SECRET`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `TURNSTILE_SECRET_KEY` e `DB_SSL=true`.
 
 > ⚠️ `VOTER_HASH_SECRET` nunca deve mudar depois que a votação começar: isso apagaria o controle de quem já votou.

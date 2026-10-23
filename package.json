@@ -25,7 +25,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "prepr": "npm run lint && npx prettier --check . && npm run build && npm run test"
+    "prepr": "npm run lint && npx prettier --check . && npm run build && npm run test",
+    "stats:sync": "node dist/src/jobs/sync-player-stats.js",
+    "stats:sync:dev": "ts-node -r tsconfig-paths/register src/jobs/sync-player-stats.ts"
   },
   "dependencies": {
     "@apollo/server": "^5.2.0",

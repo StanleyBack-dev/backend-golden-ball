@@ -1,0 +1,59 @@
+# Copies the nominees' Ballon d'Or-window stats (Highlightly) into Postgres.
+# The site only reads the database, so the provider is never called per
+# visitor. The window is closed: once a run completes, later runs exit
+# without calling the API.
+#
+# Fallback: three schedules a day. Until the data is complete each run
+# resumes where the previous one stopped (runs are resumable); if all fail,
+# the site keeps serving what was already synced.
+name: Sync Player Stats
+
+on:
+  schedule:
+    # Times in UTC; Brasília is UTC-3 all year.
+    # 10:00 Brasília: the daily sync.
+    - cron: "0 13 * * *"
+    # 17:00 Brasília: fallback for a failed or partial run.
+    - cron: "0 20 * * *"
+    # 23:50 Brasília: last fallback of the day.
+    - cron: "50 2 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Sync even if a run already succeeded today"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-player-stats
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync stats from Highlightly
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Sync
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
+          DB_SSL: "true"
+          # Schema changes ship with the API deploy, never from this job.
+          DB_MIGRATIONS_RUN: "false"
+        run: npm run stats:sync -- ${{ inputs.force && '--force' || '' }}
